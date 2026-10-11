@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "app-reverse-spec"
+version = "1.0.0"
+description = "端到端全栈软件与网站逆向分析与全景文档生成工作流工具"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "jiang", email = "3915466252@qq.com" }
+]
+keywords = [
+    "reverse-engineering",
+    "prd-generator",
+    "openapi",
+    "mitmproxy2swagger",
+    "browser-use",
+    "repomix",
+    "agent",
+    "architecture-blueprint"
+]
+dependencies = [
+    "mitmproxy>=10.0.0",
+    "mitmproxy2swagger>=0.4.0",
+    "playwright>=1.40.0",
+    "pydantic>=2.0.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0.0",
+    "click>=8.0.0"
+]
+
+[project.optional-dependencies]
+ai = [
+    "browser-use>=0.1.0",
+    "langchain-openai>=0.1.0"
+]
+
+[project.scripts]
+app-reverse-spec = "app_reverse_spec.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
