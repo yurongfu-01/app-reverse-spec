@@ -1,13 +1,14 @@
-# App-Reverse-Spec (全栈应用逆向与全景方案生成工作流)
+# App-Reverse-Spec (全栈应用 1:1 落地复刻与全景规格书工作流)
 
 <p align="center">
-  <b>端到端软件与网站逆向分析器：一键输入目标，直接输出 UI/UX 交互图谱、后端 API 契约、状态流转与可落地的全景 PRD 蓝图</b>
+  <b>端到端全栈软件与网站逆向复刻工作流：真机原画截屏、原生SVG资产剥离、控件级按键调用链追踪、OpenAPI/Protobuf契约逆向、生产级DDL推导与工业级复刻白皮书生成</b>
 </p>
 
 <p align="center">
   <a href="#-流程来源与开源致敬-attributions"><img src="https://img.shields.io/badge/Open_Source-Integrated-blue.svg" alt="Open Source"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
   <a href="#-支持的目标类型"><img src="https://img.shields.io/badge/Supports-Web_|_Client_|_Source-orange.svg" alt="Targets"></a>
+  <a href="skills/app-reverse-spec"><img src="https://img.shields.io/badge/Version-v2.0.0-blueviolet.svg" alt="Version 2.0"></a>
   <a href="skills/app-reverse-spec"><img src="https://img.shields.io/badge/Antigravity-Agent_Native-purple.svg" alt="Agent Ready"></a>
 </p>
 
@@ -15,15 +16,14 @@
 
 ## 📖 项目简介 (Overview)
 
-在日常开发、竞品调研、架构重构或安全审计中，开发者常常需要深入理解一款现有软件或网站：
-- 它有哪些 UI 页面与控件？
-- 用户触发某个按钮时，前后端经历了怎样的交互？
-- 后端有哪些未公开的 REST/RPC 接口？入参和响应的数据结构是什么？
-- 数据库底层是如何建模的？核心业务状态机如何流转？
+在日常开发、竞品调研、架构重构或安全审计中，开发者常常需要深入理解并完整复刻一款现有软件或网站：
+- **视觉真实度**：如何摆脱“无图脑补”，直接获取全尺寸真机原画截屏与 100% 原版 SVG 图标/字体资产？
+- **按键因果闭环**：用户点击某个按钮时，前端状态如何变化？触发了哪个 API/IPC？成功与失败如何渲染？
+- **后端工程契约**：如何直接拿到可编译生成前后端 SDK/Controller 桩代码的标准 OpenAPI 3.0 / Protobuf IDL 契约？
+- **数据持久化**：如何直接获得可执行的 PostgreSQL / MySQL 建表 DDL 与客户端本地存储 Schema？
+- **极速联调**：如何在后端未完成前，10 秒拉起本地 Mock Server 让前端跑通所有功能？
 
-目前业内存在许多优秀的单一维度工具（例如仅抓包的、仅爬虫的、仅代码打包的），但**缺乏一套将它们编排成工业级闭环流水线的框架**。
-
-**App-Reverse-Spec** 综合集成了全球开源社区在**多模态探索、透明流量拦截、协议推导与代码打包**领域的顶尖项目，并封装为统一的 CLI 调度工具与 Agent Skill。无论输入的是**在线网站 URL、客户端安装包（.exe / .asar / .apk）还是开源代码仓库**，均能自动规划并执行逆向流水线，最终产出符合企业级标准的全景方案与落地 PRD。
+**App-Reverse-Spec v2.0** 综合集成了全球开源社区在**多模态探索、透明流量拦截、协议推导、代码打包与原生资产抽取**领域的顶尖项目，并封装为统一的 CLI 调度工具与 Agent Skill。无论输入的是**在线网站 URL、客户端安装包（.exe / .asar / .apk）还是开源代码仓库**，均能自动规划并执行工业级复刻流水线，直接生成达到“闭眼可落地复刻”工业级标准的架构规格书与工程资产包。
 
 ---
 
@@ -128,16 +128,28 @@ app-reverse-spec attributions
 
 ---
 
+## 🌟 官方开源实战示范包 (Official Showcase)
+
+本项目在 [`examples/chatbox_blueprint/`](examples/chatbox_blueprint/) 完整呈现了一套针对全球 25K+ Stars 顶尖开源 AI 桌面客户端 **[Chatbox](https://github.com/Bin-Huang/chatbox)** 的 1:1 落地复刻工程包：
+
+- 📋 **全景落地复刻规格书**：[`CHATBOX_REPLICATION_SPEC.md`](examples/chatbox_blueprint/CHATBOX_REPLICATION_SPEC.md)（涵盖 7 大章节与无二义性【按键-动作-响应】全局映射矩阵）
+- 🔌 **编译级 OpenAPI 3.0 契约**：[`contracts/chatbox_api.yaml`](examples/chatbox_blueprint/contracts/chatbox_api.yaml)（支持直接生成 SDK/Controller 桩代码）
+- 🗄️ **双持久化可执行 DDL**：云端 PostgreSQL [`schemas/ddl.sql`](examples/chatbox_blueprint/schemas/ddl.sql) + 本地单机 SQLite FTS5 全文索引 [`schemas/sqlite_client_schema.sql`](examples/chatbox_blueprint/schemas/sqlite_client_schema.sql)
+- ⚡ **本地极速 Mock 联调环境**：[`mock/README.md`](examples/chatbox_blueprint/mock/README.md)（基于 Prism 10 秒拉起本地 Mock 服务）
+
+---
+
 ## 📑 交付方案标准（输出内容概览）
 
-输出的方案规范严格遵循 [`skills/app-reverse-spec/references/PRD_TEMPLATE.md`](skills/app-reverse-spec/references/PRD_TEMPLATE.md)，包含：
+输出的方案规范严格遵循 [`skills/app-reverse-spec/references/PRD_TEMPLATE.md`](skills/app-reverse-spec/references/PRD_TEMPLATE.md)，包含七大工业级核心章节：
 
-- **1. 系统业务定位与功能全貌**：业务痛点、核心价值、功能矩阵脑图、核心业务逻辑流。
-- **2. UI/UX 交互与用户旅程**：页面路由表、核心交互时序图（Mermaid Sequence）、组件设计系统。
-- **3. 前端工程与技术架构**：原技术栈判定、现代化推荐选型、状态管理与客户端缓存流。
-- **4. 后端架构与接口协议**：鉴权流程、基于 OpenAPI 提炼的完整请求路径、参数与响应 Schema。
-- **5. 数据实体模型与状态机**：实体关系图（Mermaid ER）、对象生命周期状态机。
-- **6. 1:1 落地复刻与重构实施方案**：现代化架构清单、4 阶段 Sprint 排期、关键技术攻坚指南。
+- **1. 系统业务定位与功能全貌**：核心商业模式、功能矩阵拓扑图、核心业务逻辑流（Mermaid）。
+- **2. 视觉系统与 UI/UX 交互闭环**：真实截图索引、Design Tokens 规范、**【按键-动作-响应】全局映射矩阵**、交互时序图。
+- **3. 前端工程与组件架构**：技术栈选型、组件树拆解、客户端状态流与缓存策略。
+- **4. 后端架构与接口协议**：网络拓扑、**可执行级 OpenAPI 3.0 / Protobuf IDL 契约**、全局错误码与重试机制。
+- **5. 数据实体模型与持久化层**：Mermaid ER 拓扑、**生产级可执行建表 DDL (SQL)**、客户端本地存储 Schema。
+- **6. 核心算法与硬核模块解密**：核心业务算法伪代码（如多模型适配、滑动窗口截断）、原生算力层接口定义。
+- **7. 1:1 落地复刻与实施路线图**：Monorepo 脚手架目录规划、本地 Mock 联调指南、4 阶段 Sprint 排期与验收准则 (DoD)。
 
 ---
 

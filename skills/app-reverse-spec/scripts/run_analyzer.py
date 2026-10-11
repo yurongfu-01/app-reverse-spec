@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-App Reverse Spec - 自动化探测与逆向工作流调度器
-用于一键探测目标类型（Web URL / 客户端安装包 / 源码仓库），初始化逆向工作区，
-并协调 mitmproxy2swagger、repomix、playwright 等开源工具。
+App Reverse Spec v2.0 - 1:1 落地复刻工作流脚手架调度器
+用于一键探测目标类型（Web URL / 客户端安装包 / 源码仓库），初始化标准化 1:1 复刻工作区，
+创建原画截图、原版静态资产抽取、OpenAPI 契约、SQL DDL 与 Mock Server 目录结构。
 """
 
 import os
 import sys
 import json
 import argparse
+import shutil
 from pathlib import Path
 
 # 确保在 Windows 终端下 UTF-8 正常输出
@@ -32,6 +33,9 @@ def detect_target_type(target: str) -> str:
     path = Path(target)
     if path.exists():
         if path.is_dir():
+            # 探测是否为 Electron 软件目录
+            if (path / "resources" / "app.asar").exists() or (path / "resources" / "app").exists():
+                return "electron_app_dir"
             return "local_source_dir"
         suffix = path.suffix.lower()
         if suffix in [".exe", ".msi", ".dll"]:
@@ -50,26 +54,50 @@ def init_workspace(target: str, target_type: str, base_dir: Path) -> Path:
     safe_name = sanitize_name(target)
     workspace = base_dir / ".analysis" / safe_name
     workspace.mkdir(parents=True, exist_ok=True)
-    (workspace / "screenshots").mkdir(exist_ok=True)
-    (workspace / "traffic").mkdir(exist_ok=True)
-    (workspace / "extracted").mkdir(exist_ok=True)
+    
+    # 建立标准化 1:1 落地复刻所需的资产与协议目录
+    (workspace / "assets" / "screenshots").mkdir(parents=True, exist_ok=True)
+    (workspace / "assets" / "icons").mkdir(parents=True, exist_ok=True)
+    (workspace / "assets" / "fonts").mkdir(parents=True, exist_ok=True)
+    (workspace / "contracts").mkdir(parents=True, exist_ok=True)
+    (workspace / "schemas").mkdir(parents=True, exist_ok=True)
+    (workspace / "traffic").mkdir(parents=True, exist_ok=True)
+    (workspace / "extracted").mkdir(parents=True, exist_ok=True)
+    (workspace / "mock").mkdir(parents=True, exist_ok=True)
     
     manifest = {
+        "version": "2.0.0",
         "target": target,
         "type": target_type,
         "workspace": str(workspace.resolve()),
-        "status": "initialized",
+        "status": "scaffolded",
         "stages": {
+            "screenshots_captured": False,
+            "assets_extracted": False,
             "traffic_captured": False,
+            "event_matrix_built": False,
             "openapi_generated": False,
-            "ui_screenshots_taken": False,
-            "code_packaged": False,
-            "spec_generated": False
+            "sql_ddl_generated": False,
+            "mock_server_ready": False,
+            "spec_blueprint_completed": False
         }
     }
     
     with open(workspace / "manifest.json", "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
+        
+    # 生成 mock 服务的简易启动脚本说明
+    mock_readme = workspace / "mock" / "README.md"
+    if not mock_readme.exists():
+        mock_readme.write_text(
+            "# 本地极速 Mock 服务\n\n"
+            "当 `contracts/openapi.yaml` 生成后，运行以下命令一键拉起前端联调 Mock 接口：\n\n"
+            "```bash\n"
+            "npm install -g @stoplight/prism-cli\n"
+            "prism mock ../contracts/openapi.yaml -p 4010\n"
+            "```\n",
+            encoding="utf-8"
+        )
         
     return workspace
 
@@ -84,56 +112,65 @@ def generate_execution_plan(target: str, target_type: str, workspace: Path) -> d
     }
     
     if target_type == "web_url":
-        plan["recommended_tools"] = ["Browser-Use", "mitmproxy2swagger", "Wappalyzer"]
+        plan["recommended_tools"] = ["Playwright", "mitmproxy2swagger", "CDP Event Listener", "Prism"]
         plan["execution_steps"] = [
             {
                 "step": 1,
-                "name": "启动网络流量监听 (Network Interception)",
-                "cmd": f'mitmdump -w "{ws_str}/traffic/traffic.flow" --listen-port 8080',
-                "alternative": f'在浏览器打开 {target}，操作核心功能后从 Network 面板导出 HAR 到 "{ws_str}/traffic/traffic.har"'
+                "name": "真实原画批量截屏 (Visual Screenshots Capture)",
+                "action": f'使用 Playwright 高清无损截取关键界面（主页、弹窗、表单、报错态）至 "{ws_str}/assets/screenshots/"'
             },
             {
                 "step": 2,
-                "name": "多模态 UI 巡检与截图 (UI Exploration)",
-                "action": f'使用 Browser-Use 遍历 {target} 的关键页面与菜单，截图保存至 "{ws_str}/screenshots/"'
+                "name": "网络通信嗅探与 HAR 导出 (Traffic Sniffing)",
+                "cmd": f'在浏览器开发者工具 Network 面板导出 HAR，保存至 "{ws_str}/traffic/traffic.har"'
             },
             {
                 "step": 3,
-                "name": "逆向生成 OpenAPI 契约 (API Extraction)",
-                "cmd": f'mitmproxy2swagger -i "{ws_str}/traffic/traffic.har" -o "{ws_str}/openapi.yaml" -p "/" --generate-summaries'
+                "name": "按键事件与调用链追踪 (Event-to-Network Tracing)",
+                "action": '监听 DOM 点击事件并关联网络请求，建立【按键-动作-响应】全局映射矩阵'
             },
             {
                 "step": 4,
-                "name": "全景文档总装 (Document Synthesis)",
-                "action": "加载截图与 openapi.yaml，套用 PRD_TEMPLATE.md 生成最终全栈方案 Markdown"
+                "name": "逆向可生成代码的 OpenAPI 契约 (Contract Reverse)",
+                "cmd": f'mitmproxy2swagger -i "{ws_str}/traffic/traffic.har" -o "{ws_str}/contracts/openapi.yaml" -p "/" --generate-summaries'
+            },
+            {
+                "step": 5,
+                "name": "生成 1:1 落地复刻规格书与 Mock Server",
+                "action": f'编写 SQL DDL 到 "{ws_str}/schemas/ddl.sql"，套用 PRD_TEMPLATE 产出最终落地白皮书'
             }
         ]
-    elif target_type in ["pe_binary", "electron_asar", "android_pkg"]:
-        plan["recommended_tools"] = ["REA", "mitmproxy", "screenshot-to-code", "jadx"]
+    elif target_type in ["electron_app_dir", "electron_asar", "pe_binary"]:
+        plan["recommended_tools"] = ["asar", "mitmproxy2swagger", "UIAutomation/pywinauto", "Frida", "Prism"]
         plan["execution_steps"] = [
             {
                 "step": 1,
-                "name": "静态解包与资源提取 (Static Extraction)",
-                "action": f'针对 {target_type} 执行解包提取资源与前端 JS 代码到 "{ws_str}/extracted/"'
+                "name": "客户端解包与原生素材 100% 抽取 (Asset Extraction)",
+                "action": f'解包目标程序，将原生 SVG 图标、字体、图片批量复制到 "{ws_str}/assets/icons/" 与 "{ws_str}/assets/fonts/"'
             },
             {
                 "step": 2,
-                "name": "客户端网络通信监听 (API Sniffing)",
-                "cmd": f'配置代理 127.0.0.1:8080 并启动软件，截获通信包至 "{ws_str}/traffic/traffic.flow"'
+                "name": "原画级真机截屏采集 (Visual Ground Truth)",
+                "action": f'启动客户端并录制全尺寸原画截屏到 "{ws_str}/assets/screenshots/"'
             },
             {
                 "step": 3,
-                "name": "OpenAPI 生成与界面提取",
-                "cmd": f'mitmproxy2swagger -i "{ws_str}/traffic/traffic.flow" -o "{ws_str}/openapi.yaml" -p "/"'
+                "name": "挂载事件探针与网络监听 (Event & Traffic Trace)",
+                "cmd": f'mitmdump -w "{ws_str}/traffic/traffic.flow" --listen-port 8080 (客户端配置 127.0.0.1:8080)'
             },
             {
                 "step": 4,
-                "name": "全景方案与复刻蓝图生成",
-                "action": "汇总客户端架构、通信协议、UI控件树生成高保真重构文档"
+                "name": "导出工程级 API 契约与 SQL DDL",
+                "cmd": f'mitmproxy2swagger -i "{ws_str}/traffic/traffic.flow" -o "{ws_str}/contracts/openapi.yaml" -p "/" --generate-summaries'
+            },
+            {
+                "step": 5,
+                "name": "输出 1:1 复刻全景白皮书与 Monorepo 脚手架",
+                "action": "包含【按键-动作-响应】矩阵、SQL DDL、算法伪代码及本地 Mock 联调指南"
             }
         ]
     elif target_type in ["local_source_dir", "git_repo"]:
-        plan["recommended_tools"] = ["Repomix", "RepoAgent"]
+        plan["recommended_tools"] = ["Repomix", "Tree-sitter", "RepoAgent"]
         plan["execution_steps"] = [
             {
                 "step": 1,
@@ -142,26 +179,26 @@ def generate_execution_plan(target: str, target_type: str, workspace: Path) -> d
             },
             {
                 "step": 2,
-                "name": "AST 依赖与架构解析",
-                "action": "解析路由文件与 ORM 模型，自动绘制 Mermaid 架构拓扑与 ER 数据图"
+                "name": "AST 提取 DDL 与路由拓扑",
+                "action": f'提取 ORM Model 并输出可执行 SQL DDL 至 "{ws_str}/schemas/ddl.sql"'
             },
             {
                 "step": 3,
-                "name": "生成系统白皮书与开发文档",
-                "action": "按照 PRD_TEMPLATE 提取业务逻辑、核心算法并生成全景方案"
+                "name": "生成 1:1 重构实施规格书",
+                "action": "梳理状态机、抽取 Design Tokens 并输出 Monorepo 实施路线"
             }
         ]
     else:
         plan["recommended_tools"] = ["General AI Analyzer"]
         plan["execution_steps"] = [
-            {"step": 1, "name": "通用信息探测", "action": f"人工或自动化补充关于 {target} 的背景资料"}
+            {"step": 1, "name": "通用信息探测", "action": f"自动化探测并初始化 {target} 的逆向工作区"}
         ]
         
     return plan
 
 def main():
-    parser = argparse.ArgumentParser(description="App Reverse Spec - 自动化逆向工作流调度器")
-    parser.add_argument("target", help="目标 URL、本地文件路径或 Git 仓库地址")
+    parser = argparse.ArgumentParser(description="App Reverse Spec v2.0 - 1:1 落地复刻工作流脚手架调度器")
+    parser.add_argument("target", help="目标 URL、本地文件路径、软件目录或 Git 仓库地址")
     parser.add_argument("--output-dir", default=".", help="工作空间输出根目录")
     
     args = parser.parse_args()
@@ -172,25 +209,26 @@ def main():
     workspace = init_workspace(target, target_type, base_dir)
     plan = generate_execution_plan(target, target_type, workspace)
     
-    print("\n" + "="*60)
-    print("[*] [App Reverse Spec] 目标自动识别完成")
+    print("\n" + "="*65)
+    print("[*] [App Reverse Spec v2.0] 1:1 落地复刻工作流初始化就绪")
     print(f"[+] 目标名称/路径: {target}")
-    print(f"[+] 目标分类:     {target_type}")
-    print(f"[+] 工作空间目录: {workspace}")
-    print(f"[+] 推荐工具链:   {', '.join(plan['recommended_tools'])}")
-    print("="*60)
-    print("\n[*] 自动化执行计划:")
+    print(f"[+] 目标类型分类: {target_type}")
+    print(f"[+] 复刻工作空间: {workspace}")
+    print(f"[+] 核心工具链:   {', '.join(plan['recommended_tools'])}")
+    print("="*65)
+    print("\n[*] 工业级 1:1 复刻执行步骤:")
     for step in plan["execution_steps"]:
         print(f"  [{step['step']}] {step['name']}")
         if "cmd" in step:
             print(f"      命令: {step['cmd']}")
         if "action" in step:
             print(f"      动作: {step['action']}")
-        if "alternative" in step:
-            print(f"      备选: {step['alternative']}")
-    print("\n" + "="*60)
-    print("[+] 提示: 按照计划逐步执行上述命令，产出数据后将由 Agent 自动套用 PRD_TEMPLATE 模板生成全景方案。")
-    print("="*60 + "\n")
+    print("\n" + "="*65)
+    print(f"[+] 资产目录已创建: {workspace}/assets (包含 screenshots/ 与 icons/)")
+    print(f"[+] 契约目录已创建: {workspace}/contracts (openapi.yaml / .proto)")
+    print(f"[+] 数据模型已创建: {workspace}/schemas (可执行 DDL)")
+    print(f"[+] 极速Mock已就绪: {workspace}/mock (Prism 联调支持)")
+    print("="*65 + "\n")
 
 if __name__ == "__main__":
     main()

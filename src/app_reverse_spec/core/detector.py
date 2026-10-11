@@ -7,6 +7,7 @@ try:
         "web_url",
         "git_repo",
         "local_source_dir",
+        "electron_app_dir",
         "pe_binary",
         "electron_asar",
         "android_pkg",
@@ -28,6 +29,8 @@ def detect_target_type(target: str) -> str:
     path = Path(target)
     if path.exists():
         if path.is_dir():
+            if (path / "resources" / "app.asar").exists() or (path / "resources" / "app").exists():
+                return "electron_app_dir"
             return "local_source_dir"
         suffix = path.suffix.lower()
         if suffix in [".exe", ".msi", ".dll"]:

@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: Chatbox Open Client API Specification
+  description: 1:1 落地复刻 Chatbox 核心代理网关、多模型适配与会话云端同步接口契约
+  version: 2.0.0
+servers:
+  - url: http://localhost:4010
+    description: 本地 Prism Mock 联调服务器
+  - url: https://api.chatboxai.app/v1
+    description: 官方或自建同步服务网关
+
+paths:
+  /chat/completions:
+    post:
+      summary: 统一多模型流式/阻塞对话交互 (Unified Chat Completion)
+      description: 适配 OpenAI、Claude、Gemini、Ollama 等多厂商的统一中间代理端点
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: 对话响应 (支持 SSE 流式推流 text/event-stream 或 JSON)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: "data: {\"id\":\"chatcmpl-123\",\"choices\":[{\"delta\":{\"content\":\"你好！有什么我可以帮你的吗？\"}}]}\n\ndata: [DONE]\n\n"
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /models:
+    get:
+      summary: 获取可用模型列表 (List Models)
+      responses:
+        '200':
+          description: 成功获取模型清单
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    example: list
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelItem'
+
+  /sessions:
+    get:
+      summary: 获取云端同步会话列表 (List Sessions)
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 成功返回会话列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 12
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SessionItem'
+    post:
+      summary: 创建新会话 (Create Session)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionItem'
+
+  /sessions/{session_id}/messages:
+    get:
+      summary: 获取指定会话的历史消息 (Get Messages)
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功返回消息列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageItem'
+    post:
+      summary: 追加消息 (Append Message)
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessageRequest'
+      responses:
+        '201':
+          description: 消息追加成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageItem'
+
+components:
+  schemas:
+    ChatCompletionRequest:
+      type: object
+      required:
+        - model
+        - messages
+      properties:
+        model:
+          type: string
+          example: gpt-4o
+        messages:
+          type: array
+          items:
+            type: object
+            required:
+              - role
+              - content
+            properties:
+              role:
+                type: string
+                enum: [system, user, assistant, function, tool]
+              content:
+                type: string
+        stream:
+          type: boolean
+          default: true
+        temperature:
+          type: number
+          default: 0.7
+          minimum: 0
+          maximum: 2
+        max_tokens:
+          type: integer
+          default: 4096
+
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: chatcmpl_987219
+        model:
+          type: string
+          example: gpt-4o
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                type: object
+                properties:
+                  role:
+                    type: string
+                    example: assistant
+                  content:
+                    type: string
+                    example: 这是一条完整测试回复。
+              finish_reason:
+                type: string
+                example: stop
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+              example: 45
+            completion_tokens:
+              type: integer
+              example: 120
+            total_tokens:
+              type: integer
+              example: 165
+
+    ModelItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: gpt-4o
+        provider:
+          type: string
+          example: openai
+        display_name:
+          type: string
+          example: GPT-4o
+        context_window:
+          type: integer
+          example: 128000
+
+    SessionItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: sess_7719284
+        title:
+          type: string
+          example: Rust 异步并发学习笔记
+        model_id:
+          type: string
+          example: gpt-4o
+        system_prompt:
+          type: string
+          example: You are an expert Rust programmer.
+        message_count:
+          type: integer
+          example: 8
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        model_id:
+          type: string
+          default: gpt-4o
+        system_prompt:
+          type: string
+          default: ""
+
+    MessageItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: msg_01928312
+        session_id:
+          type: string
+          example: sess_7719284
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        tokens:
+          type: integer
+          example: 64
+        created_at:
+          type: string
+          format: date-time
+
+    CreateMessageRequest:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+
+  responses:
+    BadRequestError:
+      description: 入参校验错误
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: INVALID_ARGUMENT
+                  message:
+                    type: string
+                    example: messages 列表不能为空
+
+    UnauthorizedError:
+      description: API Key 缺失或无效
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: INVALID_API_KEY
+                  message:
+                    type: string
+                    example: 提供的 API 密钥无效或未配置
+
+    RateLimitError:
+      description: 速率限制触达
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: RATE_LIMIT_EXCEEDED
+                  message:
+                    type: string
+                    example: 请求频次过快，请稍后重试
