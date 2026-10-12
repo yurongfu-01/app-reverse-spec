@@ -1,0 +1,11 @@
+{
+  "name": "app-reverse-spec",
+  "displayName": "App Reverse Spec (全栈 1:1 落地复刻)",
+  "version": "2.0.0",
+  "description": "端到端全栈软件与网站逆向分析与 1:1 落地复刻规格书生成工作流，支持 Antigravity、Codex、Hermes、Claude、Cursor 多智能体平台。",
+  "suggestedPrompts": [
+    "分析目标软件并生成 1:1 落地复刻规格书",
+    "抓取客户端网络流量并生成 OpenAPI 契约与 SQL DDL",
+    "逆向本地软件 UI 并建立【按键-动作-响应】全局矩阵"
+  ]
+}

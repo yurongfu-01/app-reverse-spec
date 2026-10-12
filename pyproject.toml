@@ -20,6 +20,10 @@ keywords = [
     "browser-use",
     "repomix",
     "agent",
+    "codex",
+    "hermes",
+    "hermes-agent",
+    "plugin",
     "architecture-blueprint"
 ]
 dependencies = [

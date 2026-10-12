@@ -8,8 +8,9 @@
   <a href="#-流程来源与开源致敬-attributions"><img src="https://img.shields.io/badge/Open_Source-Integrated-blue.svg" alt="Open Source"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
   <a href="#-支持的目标类型"><img src="https://img.shields.io/badge/Supports-Web_|_Client_|_Source-orange.svg" alt="Targets"></a>
+  <a href="#-跨智能体平台插件与技能适配-multi-agent--plugin-adaptation"><img src="https://img.shields.io/badge/Platforms-Antigravity_|_Codex_|_Hermes_|_Claude-blue.svg" alt="Platforms"></a>
   <a href="skills/app-reverse-spec"><img src="https://img.shields.io/badge/Version-v2.0.0-blueviolet.svg" alt="Version 2.0"></a>
-  <a href="skills/app-reverse-spec"><img src="https://img.shields.io/badge/Antigravity-Agent_Native-purple.svg" alt="Agent Ready"></a>
+  <a href="plugin.json"><img src="https://img.shields.io/badge/Antigravity-Plugin_Ready-purple.svg" alt="Plugin Ready"></a>
 </p>
 
 ---
@@ -115,16 +116,46 @@ app-reverse-spec attributions
 
 ---
 
-## 🤖 作为 Antigravity / Claude Agent 技能使用
+## 🤖 跨智能体平台插件与技能适配 (Multi-Agent & Plugin Adaptation)
 
-本项目原生支持作为 **Antigravity / Cursor / Claude Code** 技能运行：
+本项目经过全面标准化架构设计，原生支持作为 **Antigravity、OpenAI Codex、Hermes (HermesStudio)、Claude Code、Cursor** 的插件或扩展技能运行：
 
-1. 将 `skills/app-reverse-spec` 目录复制到您的全局或工作区技能目录中：
-   - 全局路径：`~/.gemini/config/skills/app-reverse-spec/`
-   - 项目路径：`.agents/skills/app-reverse-spec/`
-2. 在对话中直接告诉 Agent：
-   > “请帮我分析目标网站 `https://xxx.com`，使用 app-reverse-spec 技能输出完整全景方案。”
-3. Agent 将自动激活该技能，调度工具链并按照六大规范章节生成高保真方案！
+```mermaid
+flowchart TD
+    Core["app-reverse-spec v2.0 核心引擎"]
+    
+    Core --> A1["Antigravity 平台<br>• plugin.json 原生插件<br>• ~/.gemini/config/skills/"]
+    Core --> A2["OpenAI Codex 平台<br>• .codex/skills/ 挂载<br>• adapters/codex/CODEX.md"]
+    Core --> A3["Hermes / HermesStudio 集群<br>• ~/.hermes/skills/ 挂载<br>• hermes_tool.py 原生工具<br>• ReverseEngineer 角色规约"]
+    Core --> A4["Claude Code & Cursor<br>• ~/.claude/skills/<br>• .cursor/rules/"]
+```
+
+### 1. CLI 一键自动安装与挂载
+执行以下命令，CLI 会自动将技能与适配工具分发至对应的 Agent 运行环境中：
+
+```bash
+# 一键自动适配所有支持的 Agent
+app-reverse-spec install --agent all
+
+# 单独适配 Hermes / HermesStudio
+app-reverse-spec install --agent hermes
+
+# 单独适配 OpenAI Codex
+app-reverse-spec install --agent codex
+
+# 单独适配 Antigravity
+app-reverse-spec install --agent antigravity
+```
+
+### 2. 平台专属集成说明
+
+* **Hermes / HermesStudio 集群**：
+  - 工具适配器：[`adapters/hermes/hermes_tool.py`](adapters/hermes/hermes_tool.py)，可被 `hermes-agent` 的工具调度中心动态注册加载；
+  - 角色规约：[`adapters/hermes/hermes_role.md`](adapters/hermes/hermes_role.md)，定义了专职进行架构逆向的 `ReverseEngineer` 角色，无缝接入多智能体集群协同流水线。
+* **OpenAI Codex / Copilot**：
+  - 规约入口：[`adapters/codex/CODEX.md`](adapters/codex/CODEX.md)，规范了 Codex 环境下的多模态逆向与代码生成 Prompt 注入链条。
+* **Antigravity Plugin 体系**：
+  - 根目录提供了标准的 [`plugin.json`](plugin.json)，支持直接作为 Antigravity Plugin 包进行启用、禁用与分发。
 
 ---
 
